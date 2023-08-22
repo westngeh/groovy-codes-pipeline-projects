@@ -1,0 +1,67 @@
+pipeline{
+    agent any
+     tools{
+        maven "maven3.8.6"
+     }
+stages{
+    stage('1clonecode'){
+        steps{
+            sh "echo 'clonning code now' "
+            git "https://github.com/elvis-ngeh/maven-web-application"
+        }
+       }
+stage('2test&build'){
+    steps{
+        sh "echo 'running JUNIt&build ' "
+        sh "mvn clean package"
+    }
+}
+stage('3codeQuality'){
+    steps{
+        sh "echo 'running code analyses' "
+        sh "mvn sonar:sonar"
+    }
+}
+stage('4uploadArtifacts'){
+    steps{
+        sh "echo 'uploading artifacts to nexus now'"
+        sh "mvn deploy"
+    }
+}
+stage('5deploytoUAT'){
+    steps{
+        sh "echo 'deploying app to tomcat for test'"
+        deploy adapters: [tomcat9(credentialsId: 'tomcat-credentials', path: '', url: 'http://10.0.1.148:8080')], contextPath: null, war: 'target/*war'
+    }
+}
+stage('6approvalGate'){
+    steps{
+        sh "echo 'app ready for review'"
+        timeout(time: 5, unit: 'DAYS'){
+        input message:'app ready for deployment, pls review an approve'
+        }
+    }
+   }
+stage('7deployApp2Prod'){
+    steps{
+        sh "echo 'deploying app to prod '"
+        deploy adapters: [tomcat9(credentialsId: 'tomcat-credentials', path: '', url: 'http://10.0.1.148:8080')], contextPath: null, war: 'target/*war'
+    }
+}
+}
+
+post{
+    always{
+        emailext body: 'Thanks for the hard work ', subject: 'deploying to Prod', to: 'elvis.bantar@gmail.com'
+   }
+
+success{
+emailext body: 'build was a success, great job team ', subject: 'deploying to Prod', to: 'elvis.bantar@gmail.com'
+}
+
+failure{
+emailext body: 'build failed,please resolve   ', subject: 'deploying to Prod', to: 'elvis.bantar@gmail.com'
+}
+
+}
+}

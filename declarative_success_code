@@ -1,0 +1,57 @@
+pipeline{
+  agent any 
+  tools {
+    maven "maven3.8.6"
+  }
+  stages{  
+    stage('1GetCode'){
+      steps{
+        sh "echo 'cloning the latest application version' "
+        git "https://github.com/elvis-ngeh/maven-web-application"
+      }
+    }
+stage ('2test+build') {
+    steps {
+        sh "echo 'JUnit test & build' "
+        sh "mvn clean package"
+    }
+}
+stage ('3codeQuality'){
+    steps{
+        sh "echo 'running codeQaulity anylyses' "
+        sh "mvn sonar:sonar"
+    }
+}
+stage ('4uploadArtifacts'){
+    steps{
+        sh "echo 'unploadArtifacts to nexus' "
+        sh "mvn deploy"
+    }
+}
+ stage ('5deploy2UAT'){
+    steps{
+        sh "echo'test app on 'UATapptest' "
+        deploy adapters: [tomcat9(credentialsId: 'tomcat-credentials', path: '', url: 'http://10.0.1.133:8080/')], contextPath: null, war: 'target/*war'
+    }
+ }
+  stage ('6approvalGate'){
+    steps{
+       echo " 'ready for review' "
+       timeout(time:5, unit:'DAYS') {
+       input message: 'Application ready for deployment, Please review and approve'
+    }
+ }
+stage ('7deploy2prod'){
+    steps{
+      echo" 'approved and heading to prod' " 
+      deploy adapters: [tomcat9(credentialsId: 'tomcat-credentials', path: '', url: 'http://10.0.1.148:8080/')], contextPath: null, onFailure: false, war: 'target/*war'
+    }
+}
+ post{
+    always{
+        emailext body: 'Project is done and deployed ', subject: 'Great job Guys ', to: 'elvis.bantar@sciencelogic.com'
+    }
+ }
+}
+}
+}

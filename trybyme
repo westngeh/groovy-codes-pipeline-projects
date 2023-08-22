@@ -1,0 +1,35 @@
+node{
+    stage('1clonecode'){
+        sh "echo'cloning code now ' "
+        git "https://github.com/elvis-ngeh/maven-web-application"
+    }
+    stage('2test&build'){
+        sh "echo 'Running JUnit test & build'"
+        sh "mvn clean package "
+    }
+    stage('3codeQuality'){
+        sh "echo'running code analyses now '"
+        sh "mvn sonar:sonar"
+    }
+    stage('4uploadartifacts'){
+        sh"echo'Uploads artifacts to nexus' "
+        sh "mvn deploy"
+    }
+    stage('5UATtest'){
+        sh"echo'deploy code to UAT for internal test '"
+        generate pipeline syntax for tomcat authentication
+    }
+    stage('6approvalgate'){
+        sh "echo'review code and approve'"
+        timeout(time: 5, unit: "DAYS"){
+            input message:application ready for deployment , pls review
+        }
+        stage('7deploytoprod'){
+            sh "echo ' we are headong to prod '"
+            generate pipeline syntax for prod server
+        }
+        stage('8notification'){
+            
+        }
+    }
+}
